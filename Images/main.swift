@@ -9,7 +9,7 @@ func imageDimensionsFitInRatio(ratio: CGFloat, width: CGFloat, height: CGFloat) 
 }
 
 func findCenterOfFeatures(features: [CIFeature], height: CGFloat) -> CGFloat {
-    var center: CGFloat = height / 2
+    var center: CGFloat = 0
     if features.count > 0 {
         center = 0
         for feature in features where feature.type == "Face" {
@@ -41,18 +41,13 @@ func cropRectangleOnCenter(center: CGFloat, width: CGFloat, height: CGFloat, rat
 print(NSDate())
 
 let paths = [
-    "/Users/ben/Desktop/IMG_7743.jpg",
-    "/Users/ben/Desktop/IMG_8126.jpg",
-    "/Users/ben/Desktop/IMG_8212.jpg",
-    "/Users/ben/Desktop/IMG_8797.jpg",
+    "/Users/ben/Desktop/jim_sharp.jpg",
 ]
 
 let outputDirectory = NSURL(fileURLWithPath: "/Users/ben/Desktop/output/", isDirectory: true)
 let ratio:CGFloat = 9/16
 
 for path in paths {
-    
-    
     let url = NSURL(fileURLWithPath: path)
     if let imageSource = CGImageSourceCreateWithURL(url, nil), dict = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) {
         let properties = dict as NSDictionary
@@ -70,28 +65,27 @@ for path in paths {
                 let width = CGImageGetWidth(initialImage)
                 let height = CGImageGetHeight(initialImage)
                 let image = CIImage(CGImage: initialImage)
-                let options: [String: AnyObject] = [CIDetectorAccuracy:CIDetectorAccuracyLow]
+                let options: [String: AnyObject] = [CIDetectorAccuracy:CIDetectorAccuracyHigh]
                 let detector = CIDetector(ofType:CIDetectorTypeFace, context:nil, options: options)
                 let features = detector.featuresInImage(image)
                 let center = findCenterOfFeatures(features, height: CGFloat(height))
                 
                 let crop = cropRectangleOnCenter(center, width: CGFloat(width), height: CGFloat(height), ratio: ratio)
                 let croppedImage = image.imageByCroppingToRect(crop)
-                
-                let representation = NSBitmapImageRep(CIImage: croppedImage)
-                
-                let fileProperties = [NSImageCompressionFactor: 0.6]
-                if let data = representation.representationUsingType(NSBitmapImageFileType.NSJPEGFileType, properties: fileProperties), filename = url.lastPathComponent {
-                    let outputURL = outputDirectory.URLByAppendingPathComponent(filename)
-                    data.writeToURL(outputURL, atomically: true)
+                if let filter = CIFilter(name: "CIUnsharpMask", withInputParameters: ["inputImage": croppedImage, "inputRadius": 1.50, "inputIntensity": 0.50]), outputImage = filter.outputImage {
+                    let representation = NSBitmapImageRep(CIImage: outputImage)
+                    
+                    let fileProperties = [NSImageCompressionFactor: 0.6]
+                    if let data = representation.representationUsingType(NSBitmapImageFileType.NSJPEGFileType, properties: fileProperties), filename = url.lastPathComponent {
+                        let outputURL = outputDirectory.URLByAppendingPathComponent(filename)
+                        data.writeToURL(outputURL, atomically: true)
+                    }
                 }
                 
             }
         }
     }
 }
-
-
 
 print(NSDate())
 
